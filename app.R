@@ -2,7 +2,7 @@ library(httr)
 library(jsonlite)
 library(shiny)
 library(tidyverse)
-library(dplyr)
+library(dplyr, warn.conflicts = FALSE)
 library(shinycssloaders)
 
 # Getting data from an API
@@ -33,26 +33,22 @@ queryString <- list(
 res_hist <- GET(hist_url, 
                 add_headers(
                   `x-rapidapi-host` = 'covid-193.p.rapidapi.com', 
-                  `x-rapidapi-key` = Sys.getenv("ennvar_covid"), 
-                query = queryString
+                  `x-rapidapi-key` = Sys.getenv("ennvar_covid")), 
+                  query = queryString
 )
 
 
 hist_data <- jsonlite::fromJSON(rawToChar(res_hist$content))
 hist_df <- as.data.frame(hist_data$response)
 
-
 # Data manipulation
 
 df <- stat_df[ !is.na(stat_df$population) == TRUE, ]
+#hist_df <- hist_df[ !is.na(hist_df$population) == TRUE, ]
 
 df$new_cases <- as.numeric(df$cases$new)
 
-variable <- names(df)
-
 # Shiny App
-
-library(shiny)
 
 ui <- fluidPage(
   theme = bslib::bs_theme(bootswatch = "darkly"),
@@ -63,10 +59,10 @@ ui <- fluidPage(
     tabPanel("Start", 
              sidebarLayout(
                sidebarPanel(
-                 textOutput("cases"),
-                 actionButton("new", "New cases", class = "btn-warning"),
-                 actionButton("deaths", "Deaths", class = "btn-warning"),
-                 actionButton("recovered", "Recovered", class = "btn-warning")
+                 selectInput("cases_select", 
+                             "Specify the output to be shown on the plot:", 
+                             c("New cases", "Recovered", "Deaths" )),
+                 actionButton("cases_btn", "Show", class = "btn-warning")
                ),
                mainPanel(
                  tabsetPanel(
@@ -79,17 +75,42 @@ ui <- fluidPage(
                )
              )
     ),
-    tabPanel("Historical data", "Tutaj będą dane historyczne"),
-    tabPanel("Country comparison", "Tutaj będzie można porównać wskaźniki dla dwóch lub więcej państw")
+    tabPanel("Historical data", "Animated historical data for each continent"),
+    tabPanel("Country comparison", 
+             fluidRow(
+               column(6,
+                      selectInput("continent1", 
+                                  "Select continent:", 
+                                  choices = unique(df$continent)),
+                      selectInput("country1", 
+                                  "Select first country to compare:", 
+                                  choices = NULL),
+                      tableOutput("data1")
+               ),
+               column(6,
+                      selectInput("continent2", 
+                                  "Select continent:", 
+                                  choices = unique(df$continent)),
+                      selectInput("country2", 
+                                  "Select second country to compare:", 
+                                  choices = NULL),
+                      tableOutput("data2")
+               )
+             ),
+             fluidRow(
+               withSpinner(plotOutput("plot_comparison"))
+               )
+    )
   )
 )
 
 server <- function(input, output, session) {
   thematic::thematic_shiny()
   
-  output$cases <- renderText(
-    paste("Select a button")
-  )
+  observeEvent(input$cases_select, {
+    label <- paste0("Show ", input$cases_select)
+    updateActionButton(inputId = "cases_btn", label = label)
+  })
   
   output$plot <- renderPlot({
     plot(df %>% 
@@ -110,8 +131,40 @@ server <- function(input, output, session) {
       }
     }
   })
+  
+  continent1 <- reactive({
+    filter(df, continent == input$continent1)
+  })
+  
+  observeEvent(continent1(), {
+    choices <- unique(continent1()$country)
+    updateSelectInput(inputId = "country1", choices = choices) 
+  })
+  
+  continent2 <- reactive({
+    filter(df, continent == input$continent2)
+  })
+  
+  observeEvent(continent2(), {
+    choices <- unique(continent2()$country)
+    updateSelectInput(inputId = "country2", choices = choices) 
+  })
+  
+  output$data1 <- renderTable({
+    req(input$country1)
+    continent1() %>% 
+      filter(country == input$country1) %>% 
+      select(population, new_cases, recovered, deaths)
+  })  
+  
+  output$data2 <- renderTable({
+    req(input$country2)
+    continent2() %>% 
+      filter(country == input$country2) %>% 
+      select(population, new_cases, recovered, deaths)
+  })
+  
+  # space for plot #
 }
 
 shinyApp(ui, server)
-
-
