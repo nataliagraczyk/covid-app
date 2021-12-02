@@ -47,6 +47,8 @@ df <- stat_df[ !is.na(stat_df$population) == TRUE, ]
 #hist_df <- hist_df[ !is.na(hist_df$population) == TRUE, ]
 
 df$new_cases <- as.numeric(df$cases$new)
+df$deaths <- as.numeric(df$deaths$new)
+df$recovered <- as.numeric(df$cases$recovered)
 
 # Shiny App
 
