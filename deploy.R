@@ -1,4 +1,4 @@
-library(rsconnect)
+install.packages(c("renv", "rsconnect"))
 
 renv::restore()
 
