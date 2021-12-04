@@ -2,8 +2,9 @@ library(httr)
 library(jsonlite)
 library(shiny)
 library(tidyverse)
-library(dplyr, warn.conflicts = FALSE)
+library(dplyr)
 library(shinycssloaders)
+library(thematic)
 
 # Getting data from an API
 
@@ -14,7 +15,7 @@ stat_url <- "https://covid-193.p.rapidapi.com/statistics"
 res_stat <- GET(stat_url, 
                 add_headers(
                   `x-rapidapi-host` = 'covid-193.p.rapidapi.com', 
-                  `x-rapidapi-key` = Sys.getenv("ennvar_covid")
+                  `x-rapidapi-key` = Sys.getenv("SHINYAPP_APIKEY")
                 )
 )
 
@@ -33,7 +34,7 @@ queryString <- list(
 res_hist <- GET(hist_url, 
                 add_headers(
                   `x-rapidapi-host` = 'covid-193.p.rapidapi.com', 
-                  `x-rapidapi-key` = Sys.getenv("ennvar_covid")), 
+                  `x-rapidapi-key` = Sys.getenv("SHINYAPP_APIKEY")), 
                   query = queryString
 )
 
