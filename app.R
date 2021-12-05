@@ -5,6 +5,7 @@ library(tidyverse)
 library(dplyr)
 library(shinycssloaders)
 library(thematic)
+library(curl)
 
 # Getting data from an API
 
