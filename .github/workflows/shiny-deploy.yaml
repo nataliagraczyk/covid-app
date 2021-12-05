@@ -33,9 +33,8 @@ jobs:
           r-version: ${{ matrix.config.r }}
           use-public-rspm: true
           
-      - name: Install curl
-        run: install.packages("curl")
-        shell: Rscript {0}
+      - name: Install dependencies
+        run: sudo apt-get install libcurl4-openssl-dev
 
       - name: Deploy to shinyapps.io
         if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master'
