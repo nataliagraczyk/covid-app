@@ -19,6 +19,7 @@ jobs:
       APP_DIR: "app"
       GITHUB_PAT: ${{ secrets.GITHUB_TOKEN }}
       SHINYAPP_APIKEY: ${{ secrets.SHINYAPP_APIKEY }}
+      PKG_CONFIG_PATH: ${{ secrets.PKG_CONFIG_PATH }}
       R_KEEP_PKG_SOURCE: yes
 
     steps:
