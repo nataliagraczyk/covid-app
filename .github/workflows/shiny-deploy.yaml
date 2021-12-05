@@ -31,12 +31,18 @@ jobs:
         uses: r-lib/actions/setup-r@v1
         with:
           r-version: ${{ matrix.config.r }}
-          use-public-rspm: true
-          
+          use-public-rspm: true       
+        
       - name: Create and populate .Renviron file
+        env:
+          SHINYAPP_APIKEY: ${{ secrets.SHINYAPP_APIKEY }}
         run: |
+          touch .Renviron
           echo SHINYAPP_APIKEY="$SHINYAPP_APIKEY" >> ~/.Renviron
-        shell: bash          
+          echo "cat .Renviron"
+          echo "ls -a ."
+          echo "ls -a ${{ github.workspace }}"
+        shell: bash
           
       - name: Install dependencies
         run: sudo apt-get install libcurl4-openssl-dev
