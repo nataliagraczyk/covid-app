@@ -32,6 +32,10 @@ jobs:
         with:
           r-version: ${{ matrix.config.r }}
           use-public-rspm: true
+          
+      - name: Install rsconnect
+        run: install.packages("rsconnect")
+        shell: Rscript {0}
 
       - name: Deploy to shinyapps.io
         if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master'
