@@ -6,51 +6,57 @@ library(dplyr)
 library(shinycssloaders)
 library(thematic)
 library(curl)
+library(plyr)
+library(magrittr)
+library(lubridate)
 
-# Getting data from an API
+# Get the data from an API
 
-# statistics data set
+url <- "https://covid-api.mmediagroup.fr"
+resp <- GET(url, path = "v1/history?country=All&status=confirmed")
 
-stat_url <- "https://covid-193.p.rapidapi.com/statistics"
-
-res_stat <- GET(stat_url, 
-                add_headers(
-                  `x-rapidapi-host` = 'covid-193.p.rapidapi.com', 
-                  `x-rapidapi-key` = Sys.getenv("SHINYAPP_APIKEY")
-                )
+list_data_structure <- jsonlite::fromJSON(
+  rawToChar(resp$content)
 )
 
-stat_data <- jsonlite::fromJSON(rawToChar(res_stat$content))
-stat_df <- as.data.frame(stat_data$response)
+ds <- lapply(list_data_structure, function(x) {
+  x[sapply(x, is.null)] <- 0
+  unlist(x)
+})
 
-# historical data set
+complete_df <- plyr::ldply(ds, rbind)
+complete_df <- complete_df[!(complete_df$.id %in% c('Global')), ]
 
-hist_url <- "https://covid-193.p.rapidapi.com/history"
+dates_only_df <- complete_df[startsWith(names(complete_df), "All.dates")]
+general_df <-complete_df[c(2,6,10)]
+stat_df <- complete_df[c(3:5)]
 
-queryString <- list(
-  country = "usa", 
-  day = "2020-06-02"
-)
+convert_factors_to_numeric <- function(my_dataframe) { 
+  as.data.frame(lapply(my_dataframe,
+                       function(x) {
+                         if (is.factor(x)) {
+                           as.numeric(as.character(trimws(x),
+                                                   which = "both"))
+                         } else{
+                           as.numeric(x)
+                         }
+                       }
+  ),
+  stringsAsFactors = FALSE)
+}
 
-res_hist <- GET(hist_url, 
-                add_headers(
-                  `x-rapidapi-host` = 'covid-193.p.rapidapi.com', 
-                  `x-rapidapi-key` = Sys.getenv("SHINYAPP_APIKEY")), 
-                  query = queryString
-)
+dates_converted <- convert_factors_to_numeric(dates_only_df) 
+stat_converted <- convert_factors_to_numeric(stat_df)
 
+df <- cbind(general_df,stat_converted)
+df <- cbind(df, dates_converted)
 
-hist_data <- jsonlite::fromJSON(rawToChar(res_hist$content))
-hist_df <- as.data.frame(hist_data$response)
+colnames(df) <- sub("All.", "", colnames(df))
+colnames(df) <- sub("dates.", "", colnames(df))
 
-# Data manipulation
-
-df <- stat_df[ !is.na(stat_df$population) == TRUE, ]
-#hist_df <- hist_df[ !is.na(hist_df$population) == TRUE, ]
-
-df$new_cases <- as.numeric(df$cases$new)
-df$deaths <- as.numeric(df$deaths$new)
-df$recovered <- as.numeric(df$cases$recovered)
+df <- df %>%
+  add_column(new_cases = df[[7]]-df[[8]],
+             .after = 6) 
 
 # Shiny App
 
@@ -103,7 +109,7 @@ ui <- fluidPage(
              ),
              fluidRow(
                withSpinner(plotOutput("plot_comparison"))
-               )
+             )
     )
   )
 )
@@ -158,14 +164,14 @@ server <- function(input, output, session) {
     req(input$country1)
     continent1() %>% 
       filter(country == input$country1) %>% 
-      select(population, new_cases, recovered, deaths)
+      select(population, new_cases)
   })  
   
   output$data2 <- renderTable({
     req(input$country2)
     continent2() %>% 
       filter(country == input$country2) %>% 
-      select(population, new_cases, recovered, deaths)
+      select(population, new_cases)
   })
   
   # space for plot #
